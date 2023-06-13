@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import DateTime, Date, Time
 from datetime import datetime
 
-from config import db
+from app import db
 
 # Models go here!
 class User(db.Model, SerializerMixin):
@@ -57,7 +57,6 @@ class Appointment(db.Model, SerializerMixin):
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
     therapist_id = db.Column(db.Integer, db.ForeignKey('therapists.therapist_id'))
     service_id = db.Column(db.Integer, db.ForeignKey('services.service_id'))
-    appointment_date = db.Column(db.Date)
-    appointment_time = db.Column(db.Time)
+    appointment_date = db.Column(Date)
+    appointment_time = db.Column(Time)
     created_at = db.Column(DateTime, default=datetime.utcnow)
-
