@@ -19,10 +19,8 @@ db = SQLAlchemy(metadata=metadata)
 migrate = Migrate(app, db)
 db.init_app(app)
 
-# Instantiate REST API
+# Instantiate REST API, CORS
 api = Api(app)
-
-# Instantiate CORS
 CORS(app)
 
 # Import models after creating the app and db instances
