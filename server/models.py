@@ -5,7 +5,7 @@ from datetime import datetime
 
 from app import db
 
-# Models go here!
+
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
@@ -15,15 +15,8 @@ class User(db.Model, SerializerMixin):
     email = db.Column(db.String(50), unique=True)
     password = db.Column(db.String)
     created_at = db.Column(DateTime, default=datetime.utcnow)
-
-
-class Therapist(db.Model, SerializerMixin):
-    __tablename__ = 'therapists'
-
-    therapist_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
-    services_offered = db.Column(db.String, db.ForeignKey('services.title'))
-    created_at = db.Column(DateTime, default=datetime.utcnow)
+    address = db.relationship('Address', uselist=False, backref='user')
+    appointments = db.relationship('Appointment', backref='user')
 
 
 class Address(db.Model, SerializerMixin):
@@ -35,8 +28,17 @@ class Address(db.Model, SerializerMixin):
     address_line2 = db.Column(db.String(50))
     city = db.Column(db.String(50))
     state = db.Column(db.String(2))
-    zip_code  = db.Column(db.String(5))
-    country  = db.Column(db.String(50))
+    zip_code = db.Column(db.String(5))
+    country = db.Column(db.String(50))
+    created_at = db.Column(DateTime, default=datetime.utcnow)
+
+
+class Therapist(db.Model, SerializerMixin):
+    __tablename__ = 'therapists'
+
+    therapist_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    services_offered = db.relationship('Service', secondary='therapist_service_association')
     created_at = db.Column(DateTime, default=datetime.utcnow)
 
 
@@ -48,6 +50,14 @@ class Service(db.Model, SerializerMixin):
     description = db.Column(db.String())
     price = db.Column(db.Integer)
     created_at = db.Column(DateTime, default=datetime.utcnow)
+    therapists = db.relationship('Therapist', secondary='therapist_service_association')
+
+
+therapist_service_association = db.Table(
+    'therapist_service_association',
+    db.Column('therapist_id', db.Integer, db.ForeignKey('therapists.therapist_id')),
+    db.Column('service_id', db.Integer, db.ForeignKey('services.service_id'))
+)
 
 
 class Appointment(db.Model, SerializerMixin):
@@ -60,3 +70,6 @@ class Appointment(db.Model, SerializerMixin):
     appointment_date = db.Column(Date)
     appointment_time = db.Column(Time)
     created_at = db.Column(DateTime, default=datetime.utcnow)
+    user = db.relationship('User', backref='appointments')
+    therapist = db.relationship('Therapist', backref='appointments')
+    service = db.relationship('Service', backref='appointments')
