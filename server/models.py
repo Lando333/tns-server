@@ -5,18 +5,33 @@ from datetime import datetime
 
 from app import db
 
+user_appointment = db.Table('user_appointment', 
+    db.Column('user_id', db.Integer, db.ForeignKey('users.user_id')),
+    db.Column('appointment_id', db.Integer, db.ForeignKey('appointments.appointment_id'))
+)
+
+therapist_services = db.Table(
+    'therapist_services',
+    db.Column('therapist_id', db.Integer, db.ForeignKey('therapists.therapist_id')),
+    db.Column('service_id', db.Integer, db.ForeignKey('services.service_id'))
+)
 
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
     user_id = db.Column(db.Integer, primary_key=True)
-    first_name = db.Column(db.String)
-    last_name = db.Column(db.String)
-    email = db.Column(db.String(50), unique=True)
-    password = db.Column(db.String)
+    first_name = db.Column(db.String, nullable=False)
+    last_name = db.Column(db.String, nullable=False)
+    email = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String, nullable=False)
     created_at = db.Column(DateTime, default=datetime.utcnow)
-    address = db.relationship('Address', uselist=False, backref='user')
-    appointments = db.relationship('Appointment', backref='user')
+
+    address = db.relationship('Address', backref='user', uselist=False)
+    therapist = db.relationship('Therapist', backref='user', uselist=False)
+    appointments = db.relationship('Appointment', secondary=user_appointment, backref=db.backref('users', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<User: {self.first_name} {self.last_name}'
 
 
 class Address(db.Model, SerializerMixin):
@@ -24,40 +39,33 @@ class Address(db.Model, SerializerMixin):
 
     address_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
-    address_line1 = db.Column(db.String(50))
+    address_line1 = db.Column(db.String(100), nullable=False)
     address_line2 = db.Column(db.String(50))
-    city = db.Column(db.String(50))
-    state = db.Column(db.String(2))
-    zip_code = db.Column(db.String(5))
-    country = db.Column(db.String(50))
+    city = db.Column(db.String(50), nullable=False)
+    state = db.Column(db.String(50), nullable=False)
+    zip_code = db.Column(db.String(10), nullable=False)
+    country = db.Column(db.String(50), nullable=False)
     created_at = db.Column(DateTime, default=datetime.utcnow)
-
 
 class Therapist(db.Model, SerializerMixin):
     __tablename__ = 'therapists'
 
     therapist_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
-    services_offered = db.relationship('Service', secondary='therapist_service_association')
     created_at = db.Column(DateTime, default=datetime.utcnow)
+
+    services = db.relationship('Service', secondary='therapist_services')
 
 
 class Service(db.Model, SerializerMixin):
     __tablename__ = 'services'
 
     service_id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), unique=True)
-    description = db.Column(db.String())
-    price = db.Column(db.Integer)
+    title = db.Column(db.String(), unique=True, nullable=False)
+    description = db.Column(db.String(), nullable=False)
+    price = db.Column(db.Integer, nullable=False)
     created_at = db.Column(DateTime, default=datetime.utcnow)
-    therapists = db.relationship('Therapist', secondary='therapist_service_association')
 
-
-therapist_service_association = db.Table(
-    'therapist_service_association',
-    db.Column('therapist_id', db.Integer, db.ForeignKey('therapists.therapist_id')),
-    db.Column('service_id', db.Integer, db.ForeignKey('services.service_id'))
-)
 
 
 class Appointment(db.Model, SerializerMixin):
@@ -67,9 +75,17 @@ class Appointment(db.Model, SerializerMixin):
     user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
     therapist_id = db.Column(db.Integer, db.ForeignKey('therapists.therapist_id'))
     service_id = db.Column(db.Integer, db.ForeignKey('services.service_id'))
-    appointment_date = db.Column(Date)
-    appointment_time = db.Column(Time)
+    appointment_date = db.Column(Date, nullable=False)
+    appointment_time = db.Column(Time, nullable=False)
     created_at = db.Column(DateTime, default=datetime.utcnow)
-    user = db.relationship('User', backref='appointments')
-    therapist = db.relationship('Therapist', backref='appointments')
-    service = db.relationship('Service', backref='appointments')
+
+    client = db.relationship('User', backref='user_appointments', foreign_keys=[user_id])
+    therapist = db.relationship('Therapist', backref='therapist_appointments', foreign_keys=[therapist_id])
+    service = db.relationship('Service')
+
+    def __init__(self, therapist, client, service, appointment_date, appointment_time):
+        self.therapist = therapist
+        self.client = client
+        self.service = service
+        self.appointment_date = appointment_date
+        self.appointment_time = appointment_time
