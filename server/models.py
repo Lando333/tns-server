@@ -31,7 +31,7 @@ therapist_services = db.Table(
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
-    user_id = db.Column(db.Integer(32), primary_key=True, unique=True, default=get_uuid)
+    user_id = db.Column(db.Integer, primary_key=True, unique=True, default=get_uuid)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(200), unique=True, nullable=False)
