@@ -1,9 +1,21 @@
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy_serializer import SerializerMixin
+from sqlalchemy import MetaData
 from sqlalchemy.orm import relationship
 from sqlalchemy import DateTime, Date, Time
 from datetime import datetime
 
-from app import db
+from uuid import uuid4
+
+metadata = MetaData(naming_convention={
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+})
+db = SQLAlchemy(metadata=metadata)
+
+def get_uuid():
+    return uuid4().hex
+
+
 
 user_appointment = db.Table('user_appointment', 
     db.Column('user_id', db.Integer, db.ForeignKey('users.user_id')),
@@ -19,10 +31,10 @@ therapist_services = db.Table(
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
-    user_id = db.Column(db.Integer, primary_key=True)
-    first_name = db.Column(db.String, nullable=False)
-    last_name = db.Column(db.String, nullable=False)
-    email = db.Column(db.String(50), unique=True, nullable=False)
+    user_id = db.Column(db.Integer(32), primary_key=True, unique=True, default=get_uuid)
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(200), unique=True, nullable=False)
     password = db.Column(db.String, nullable=False)
     created_at = db.Column(DateTime, default=datetime.utcnow)
 

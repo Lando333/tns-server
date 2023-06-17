@@ -17,6 +17,7 @@ pytest = "7.1.3"
 sqlalchemy = "*"
 sqlalchemy-serializer = "1.4.1"
 stripe = "*"
+flask-bcrypt = "*"
 
 [requires]
 python_full_version = "3.8.13"
