@@ -18,4 +18,5 @@ class ApplicationConfig:
     SESSION_REDIS = redis.from_url("redis://127.0.0.1:5555")
 
 
-# generate a secrete key `# generate a secrete key `python -c 'import os; print(os.urandom(16))'`
+# generate a secret key:
+# python -c 'import os; print(os.urandom(16))'

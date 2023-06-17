@@ -4,7 +4,6 @@ from sqlalchemy import MetaData
 from sqlalchemy.orm import relationship
 from sqlalchemy import DateTime, Date, Time
 from datetime import datetime
-
 from uuid import uuid4
 
 metadata = MetaData(naming_convention={
@@ -16,12 +15,10 @@ def get_uuid():
     return uuid4().hex
 
 
-
 user_appointment = db.Table('user_appointment', 
     db.Column('user_id', db.Integer, db.ForeignKey('users.user_id')),
     db.Column('appointment_id', db.Integer, db.ForeignKey('appointments.appointment_id'))
 )
-
 therapist_services = db.Table(
     'therapist_services',
     db.Column('therapist_id', db.Integer, db.ForeignKey('therapists.therapist_id')),
@@ -77,7 +74,6 @@ class Service(db.Model, SerializerMixin):
     description = db.Column(db.String(), nullable=False)
     price = db.Column(db.Integer, nullable=False)
     created_at = db.Column(DateTime, default=datetime.utcnow)
-
 
 
 class Appointment(db.Model, SerializerMixin):
