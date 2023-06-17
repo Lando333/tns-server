@@ -18,6 +18,7 @@ app.config.from_object(ApplicationConfig)
 app.json.compact = False
 
 migrate = Migrate(app, db)
+# Hashes password
 bcrypt = Bcrypt(app)
 CORS(app, supports_credentials=True)
 server_session = Session(app)
@@ -29,6 +30,28 @@ api = Api(app)
 @app.route('/')
 def index():
     return 'Welcome to Tao Now Solutions!'
+
+@app.route("/register", methods=["POST"])
+def register_user():
+    email = request.json["email"]
+    password = request.json["password"]
+
+    user_exists = User.query.filter_by(email=email).first() is not None
+
+    if user_exists:
+        return jsonify({"error": "User already exists"}), 409
+
+    hashed_password = bcrypt.generate_password_hash(password)
+    new_user = User(email=email, password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
+    
+    session["user_id"] = new_user.id
+
+    return jsonify({
+        "id": new_user.id,
+        "email": new_user.email
+    })
 
 
 
