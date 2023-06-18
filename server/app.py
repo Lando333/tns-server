@@ -62,9 +62,9 @@ def register_user():
     }), 201
 
 
-@app.route("/users/<int:user_id>", methods=["DELETE"])
+@app.route("/delete/<string:user_id>", methods=["DELETE"])
 def delete_user(user_id):
-    user = User.query.get(user_id)
+    user = User.query.filter_by(user_id=user_id).first()
 
     if user is None:
         return jsonify({"error": "User not found"}), 404
