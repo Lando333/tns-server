@@ -1,6 +1,5 @@
 from dotenv import load_dotenv
 import os
-import redis
 
 load_dotenv()
 
@@ -11,10 +10,12 @@ class ApplicationConfig:
     # SQLALCHEMY_ECHO = True
     SQLALCHEMY_DATABASE_URI = r"sqlite:///app.db"
 
-    SESSION_TYPE = "redis"
+    SESSION_TYPE = "filesystem"
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
-    SESSION_REDIS = redis.Redis(host='localhost', port=5555)
+
+    CORS_ORIGINS = '*'
+
 
 
 

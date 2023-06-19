@@ -7,7 +7,6 @@ from flask_restful import Api, Resource, reqparse
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from flask_bcrypt import Bcrypt
-from flask_session import Session
 from config import ApplicationConfig
 from datetime import datetime
 from models import db, User
@@ -20,7 +19,6 @@ app.json.compact = False
 migrate = Migrate(app, db)
 # Hashes password
 bcrypt = Bcrypt(app)
-server_session = Session(app)
 CORS(app, supports_credentials=True)
 db.init_app(app)
 
@@ -111,8 +109,6 @@ def delete_user(user_id):
     db.session.commit()
 
     return jsonify({"message": "User deleted successfully"}), 202
-
-
 
 
 if __name__ == '__main__':
