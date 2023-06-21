@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from flask_bcrypt import Bcrypt
 from config import ApplicationConfig
 from datetime import datetime
-from models import db, User, Therapist
+from models import db, User, Address, Therapist
 
 # Instantiate app, set attributes
 app = Flask(__name__)
@@ -59,6 +59,7 @@ def register_user():
     if user_exists:
         return jsonify({"error": "User already exists"}), 409
     hashed_password = bcrypt.generate_password_hash(password)
+
     new_user = User(
         email=email,
         password=hashed_password,
@@ -67,6 +68,27 @@ def register_user():
         )
     db.session.add(new_user)
     db.session.commit()
+
+    address_line1 = request.json["address_line1"]
+    address_line2 = request.json["address_line2"]
+    city = request.json["city"]
+    state = request.json["state"]
+    zip_code = request.json["zip_code"]
+    country = request.json["country"]
+
+    user_address = Address(
+        user_id=new_user.user_id,
+
+        address_line1=address_line1,
+        address_line2=address_line2,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        country=country
+    )
+    db.session.add(user_address)
+    db.session.commit()
+
     session["user_id"] = new_user.user_id
     return jsonify({
         "id": new_user.user_id,
@@ -114,13 +136,6 @@ def create_therapist():
     db.session.add(new_therapist)
     db.session.commit()
     return jsonify({"message": "Therapist created successfully"}), 201
-
-
-@app.route("/new_address/<string:user_id>")
-def new_address(user_id):
-    pass
-
-
 
 
 if __name__ == '__main__':
