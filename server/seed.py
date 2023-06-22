@@ -13,6 +13,11 @@ from app import app
 from models import db, User, Address, Therapist, Service, Appointment,\
     therapist_services, user_appointment
 
+DURATIONS = [
+    60,
+    90
+]
+
 OFFERED_SERVICES = [
     'Swedish',
     'Deep Tissue',
@@ -78,6 +83,13 @@ if __name__ == '__main__':
             random_services = sample(services, k=3)
             therapist.services.extend(random_services)
 
+
+        db.session.add_all(addresses)
+        db.session.add_all(users)
+        db.session.add_all(therapists)
+        db.session.commit()
+
+
         appointments = []
         for i in range(20):
             # Generate a random date within the next 30 days
@@ -90,6 +102,7 @@ if __name__ == '__main__':
 
             rand_t = rc(therapists)
             rand_user = rc(users)
+            print("rando: " + str(rand_user))
 
             # Get the services offered by the therapist
             therapist_services = rand_t.services
@@ -99,20 +112,22 @@ if __name__ == '__main__':
             # Randomly select a service from the available services
             rand_service = rc(available_services)
             a = Appointment(
-                therapist=rand_t,
+                user_id=rand_user.user_id,
+                therapist_id=rand_t.therapist_id,
                 client=rand_user,
                 service=rand_service,
                 appointment_date=appointment_date.date(),
-                appointment_time=appointment_time.time()
+                appointment_time=appointment_time.time(),
+                duration = rc(DURATIONS),
+                end_datetime = appointment_date.date(),
             )
+            print("appointment.client: " + a.client)
             appointments.append(a)
             rand_user.appointments.append(a)
 
 
 
-        db.session.add_all(addresses)
-        db.session.add_all(users)
-        db.session.add_all(therapists)
+
         db.session.add_all(services)
         db.session.add_all(appointments)
         db.session.commit()

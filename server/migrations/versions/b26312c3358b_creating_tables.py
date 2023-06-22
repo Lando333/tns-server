@@ -1,8 +1,8 @@
-"""Created tables
+"""creating tables
 
-Revision ID: 175a7c72c92f
+Revision ID: b26312c3358b
 Revises: 
-Create Date: 2023-06-17 19:26:59.377790
+Create Date: 2023-06-22 17:34:45.841612
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '175a7c72c92f'
+revision = 'b26312c3358b'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -62,11 +62,12 @@ def upgrade():
     sa.Column('appointment_id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('therapist_id', sa.Integer(), nullable=True),
-    sa.Column('service_id', sa.Integer(), nullable=True),
+    sa.Column('service', sa.String(), nullable=False),
     sa.Column('appointment_date', sa.Date(), nullable=False),
     sa.Column('appointment_time', sa.Time(), nullable=False),
+    sa.Column('duration', sa.Integer(), nullable=False),
+    sa.Column('end_datetime', sa.Date(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['service_id'], ['services.service_id'], name=op.f('fk_appointments_service_id_services')),
     sa.ForeignKeyConstraint(['therapist_id'], ['therapists.therapist_id'], name=op.f('fk_appointments_therapist_id_therapists')),
     sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], name=op.f('fk_appointments_user_id_users')),
     sa.PrimaryKeyConstraint('appointment_id')
