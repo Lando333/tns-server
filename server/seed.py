@@ -102,7 +102,6 @@ if __name__ == '__main__':
 
             rand_t = rc(therapists)
             rand_user = rc(users)
-            print("rando: " + str(rand_user))
 
             # Get the services offered by the therapist
             therapist_services = rand_t.services
@@ -112,18 +111,17 @@ if __name__ == '__main__':
             # Randomly select a service from the available services
             rand_service = rc(available_services)
             a = Appointment(
-                user_id=rand_user.user_id,
                 therapist_id=rand_t.therapist_id,
-                client=rand_user,
-                service=rand_service,
+                user_id=rand_user.user_id,
+                service=rand_service.title,
                 appointment_date=appointment_date.date(),
                 appointment_time=appointment_time.time(),
-                duration = rc(DURATIONS),
-                end_datetime = appointment_date.date(),
+                duration=rc(DURATIONS),
+                end_datetime=appointment_date.date(),
             )
-            print("appointment.client: " + a.client)
+            # print("appointment.client: " + str(a.therapist_id))
             appointments.append(a)
-            rand_user.appointments.append(a)
+            rand_user.user_appointments.append(a)
 
 
 
@@ -139,14 +137,14 @@ if __name__ == '__main__':
 
         #  ===== Checking user appointments =====
         for user in users:
-            for appointment in user.appointments:
+            for appointment in user.user_appointments:
                 print(appointment.appointment_date)
                 if appointment.client:
                     print('Client: ' + appointment.client.first_name)
                 if appointment.therapist:
                     print('Therapist: ' + appointment.therapist.user.first_name)
                 if appointment.service:
-                    print('Service: ' + appointment.service.title)
+                    print('Service: ' + appointment.service)
                 print()
 
 

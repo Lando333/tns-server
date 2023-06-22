@@ -80,7 +80,7 @@ class Appointment(db.Model, SerializerMixin):
     __tablename__ = 'appointments'
 
     appointment_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    user_id = db.Column(db.String, db.ForeignKey('users.user_id'))
     therapist_id = db.Column(db.Integer, db.ForeignKey('therapists.therapist_id'))
     service = db.Column(db.String, nullable=False)
     appointment_date = db.Column(Date, nullable=False)
@@ -92,9 +92,9 @@ class Appointment(db.Model, SerializerMixin):
     client = db.relationship('User', backref='user_appointments', foreign_keys=[user_id])
     therapist = db.relationship('Therapist', backref='therapist_appointments', foreign_keys=[therapist_id])
 
-    def __init__(self, therapist, client, service, appointment_date, appointment_time, duration, end_datetime):
-        self.therapist = therapist
-        self.client = client
+    def __init__(self, therapist_id, user_id, service, appointment_date, appointment_time, duration, end_datetime):
+        self.therapist_id = therapist_id
+        self.user_id = user_id
         self.service = service
         self.appointment_date = appointment_date
         self.appointment_time = appointment_time
