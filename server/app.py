@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from flask_bcrypt import Bcrypt
 from config import ApplicationConfig
 from datetime import datetime
-from models import db, User, Address, Therapist
+from models import db, User, Address, Therapist, Appointment, Service
 
 # Instantiate app, set attributes
 app = Flask(__name__)
@@ -136,6 +136,71 @@ def create_therapist():
     db.session.add(new_therapist)
     db.session.commit()
     return jsonify({"message": "Therapist created successfully"}), 201
+
+@app.route("/all_therapists")
+def get_therapists():
+    therapists = Therapist.query.all()
+    therapist_data = [{
+        "name": therapist.user.first_name + " " + therapist.user.last_name[:1] + ".",
+        "services": [service.title for service in therapist.services],
+        "therapist_id": therapist.therapist_id
+    } for therapist in therapists]
+    return jsonify(therapist_data), 200
+
+@app.route("/therapist_services/<therapist_name>")
+def get_therapist_services(therapist_name):
+    therapist_name = therapist_name.split()[0]  # Extract only the first name
+    therapist = Therapist.query.join(User).filter(User.first_name == therapist_name).first()
+    if therapist:
+        services = [service.title for service in therapist.services]
+        return jsonify(services)
+    return jsonify([]), 404  # Return an empty list if therapist not found
+
+
+@app.route("/create_appointment", methods=["POST"])
+def create_appointment():
+    title = request.json["title"]
+    user_id = request.json["user_id"]
+    therapist_id = request.json["therapist_id"]
+    service = request.json["service"]
+    duration = int(request.json["duration"])
+    time = request.json["time"]
+    date = datetime.strptime(request.json["date"], "%Y-%m-%d").date()
+    end = datetime.strptime(request.json["end"], "%Y-%m-%d %H:%M:%S")
+
+    # Validate the event data
+    if not title:
+        return jsonify({"error": "Title is required"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "Invalid user ID"}), 400
+
+    therapist = Therapist.query.get(therapist_id)
+    if not therapist:
+        return jsonify({"error": "Invalid therapist ID"}), 400
+
+    # Check if the service exists
+    service = Service.query.filter_by(title=service).first()
+    if not service:
+        return jsonify({"error": "Invalid service"}), 400
+
+    # Create the appointment
+    appointment = Appointment(
+        therapist=therapist,
+        client=user,
+        service=service,
+        appointment_date=date,
+        appointment_time=time,
+        end_datetime=end
+    )
+
+    db.session.add(appointment)
+    db.session.commit()
+
+    return jsonify({"message": "Appointment created successfully"}), 201
+
+
 
 
 if __name__ == '__main__':
