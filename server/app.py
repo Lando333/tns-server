@@ -190,7 +190,7 @@ def get_therapist_services(therapist_name):
 def create_appointment():
     title = request.json["title"]
     user_id = request.json["user_id"]
-    therapist_id = request.json["therapist_id"]
+    therapist_name = request.json["therapist_name"]
     service = request.json["service"]
     duration = int(request.json["duration"])
     time = request.json["time"]
