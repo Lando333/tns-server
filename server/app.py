@@ -217,7 +217,7 @@ def create_appointment():
 
     # Create the appointment
     appointment = Appointment(
-        therapist_id=therapist_id,
+        therapist_id=therapist_name,
         client=user,
         service=service,
         appointment_date=start.date(),
