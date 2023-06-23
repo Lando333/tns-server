@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import pytz
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS, cross_origin
 from flask_migrate import Migrate
@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from flask_bcrypt import Bcrypt
 from config import ApplicationConfig
-from datetime import datetime
+from datetime import datetime, timedelta
 from models import db, User, Address, Therapist, Appointment, Service
 
 # Instantiate app, set attributes
@@ -19,7 +19,7 @@ app.json.compact = False
 migrate = Migrate(app, db)
 # Hashes password
 bcrypt = Bcrypt(app)
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
 db.init_app(app)
 
 api = Api(app)
@@ -147,6 +147,35 @@ def get_therapists():
     } for therapist in therapists]
     return jsonify(therapist_data), 200
 
+@app.route("/all_appointments")
+def get_all_appointments():
+    appointments = Appointment.query.all()
+    appointment_data = []
+    
+    for appointment in appointments:
+        therapist = Therapist.query.get(appointment.therapist_id)
+        user = User.query.get(appointment.user_id)
+        
+        start_datetime = datetime.combine(appointment.appointment_date, appointment.appointment_time)
+        end_datetime = start_datetime + timedelta(minutes=appointment.duration)
+        
+        appointment_dict = {
+            'title': f'{therapist.user.first_name} - {appointment.service} - {appointment.duration}',
+            'appointment_id': appointment.appointment_id,
+            'client': f'{user.first_name} {user.last_name}',
+            'therapist_id': appointment.therapist_id,
+            'therapist_name': f'{therapist.user.first_name} {therapist.user.last_name}',
+            'service': appointment.service,
+            'duration': appointment.duration,
+            'start': start_datetime.strftime('%Y-%m-%dT%H:%M:%S'),
+            'end': end_datetime.strftime('%Y-%m-%dT%H:%M:%S'),
+            'created_at': appointment.created_at.strftime('%Y-%m-%dT%H:%M:%S'),
+        }
+        appointment_data.append(appointment_dict)
+    
+    return jsonify(appointment_data), 200
+
+
 @app.route("/therapist_services/<therapist_name>")
 def get_therapist_services(therapist_name):
     therapist_name = therapist_name.split()[0]  # Extract only the first name
@@ -165,8 +194,9 @@ def create_appointment():
     service = request.json["service"]
     duration = int(request.json["duration"])
     time = request.json["time"]
-    date = datetime.strptime(request.json["date"], "%Y-%m-%d").date()
+    start = datetime.strptime(request.json["start"], "%Y-%m-%d %H:%M:%S")
     end = datetime.strptime(request.json["end"], "%Y-%m-%d %H:%M:%S")
+
 
     # Validate the event data
     if not title:
@@ -176,7 +206,7 @@ def create_appointment():
     if not user:
         return jsonify({"error": "Invalid user ID"}), 400
 
-    therapist = Therapist.query.get(therapist_id)
+    therapist = Therapist.query.join(User).filter(User.first_name == therapist_name).first()
     if not therapist:
         return jsonify({"error": "Invalid therapist ID"}), 400
 
@@ -187,13 +217,14 @@ def create_appointment():
 
     # Create the appointment
     appointment = Appointment(
-        therapist=therapist,
+        therapist_id=therapist_id,
         client=user,
         service=service,
-        appointment_date=date,
-        appointment_time=time,
+        appointment_date=start.date(),
+        appointment_time=start.time(),
         end_datetime=end
     )
+
 
     db.session.add(appointment)
     db.session.commit()

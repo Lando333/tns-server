@@ -91,44 +91,47 @@ if __name__ == '__main__':
 
 
         appointments = []
+        start_time = time(12, 0)
+        end_time = time(20, 0) 
+        working_hours_minutes = (end_time.hour - start_time.hour) * 60
         for i in range(20):
+            rand_user = rc(users)
+            rand_t = rc(therapists)
+            therapist_services = rand_t.services
+            available_services = [service for service in therapist_services if service.title in OFFERED_SERVICES]
+            random_service = rc(available_services)
+            duration = rc(DURATIONS)
+
             # Generate a random date within the next 30 days
             appointment_date = now + timedelta(days=randint(1, 30))
-            # Generate a random time within the working hours (e.g., 9 AM to 5 PM)
-            start_time = time(9, 0)
-            end_time = time(17, 0)
-            appointment_time = datetime.combine(appointment_date, start_time) + timedelta(
-                minutes=randint(0, (end_time.hour - start_time.hour) * 60))
+            random_minutes = randint(0, working_hours_minutes)
 
-            rand_t = rc(therapists)
-            rand_user = rc(users)
+            appointment_time = (datetime.min + timedelta(minutes=random_minutes)).time()
+            appointment_datetime = datetime.combine(appointment_date, appointment_time)
+            end_datetime = appointment_datetime + timedelta(minutes=duration)
 
-            # Get the services offered by the therapist
-            therapist_services = rand_t.services
-            # Filter services based on the therapist's availability
-            available_services = [service for service in therapist_services if service.title in OFFERED_SERVICES]
-            
-            # Randomly select a service from the available services
-            rand_service = rc(available_services)
             a = Appointment(
                 therapist_id=rand_t.therapist_id,
                 user_id=rand_user.user_id,
-                service=rand_service.title,
-                appointment_date=appointment_date.date(),
-                appointment_time=appointment_time.time(),
-                duration=rc(DURATIONS),
-                end_datetime=appointment_date.date(),
+                service=random_service.title,
+                duration=duration,
+                appointment_time=appointment_time,
+                appointment_date=appointment_datetime,
+                end_datetime=end_datetime,
             )
-            # print("appointment.client: " + str(a.therapist_id))
+            print("start "+str(a.appointment_date))
+            print("time "+str(a.appointment_time))
+            print("end "+str(a.end_datetime))
+            print()
             appointments.append(a)
-            rand_user.user_appointments.append(a)
-
-
+            a.users.append(rand_user)
 
 
         db.session.add_all(services)
         db.session.add_all(appointments)
         db.session.commit()
+
+
 
         #  ===== Checking therapists =====
         # for therapist in therapists:
@@ -136,16 +139,16 @@ if __name__ == '__main__':
         #     print(therapist.services)
 
         #  ===== Checking user appointments =====
-        for user in users:
-            for appointment in user.user_appointments:
-                print(appointment.appointment_date)
-                if appointment.client:
-                    print('Client: ' + appointment.client.first_name)
-                if appointment.therapist:
-                    print('Therapist: ' + appointment.therapist.user.first_name)
-                if appointment.service:
-                    print('Service: ' + appointment.service)
-                print()
+        # for user in users:
+        #     for appointment in user.user_appointments:
+        #         print(appointment.appointment_date)
+        #         if appointment.client:
+        #             print('Client: ' + appointment.client.first_name)
+        #         if appointment.therapist:
+        #             print('Therapist: ' + appointment.therapist.user.first_name)
+        #         if appointment.service:
+        #             print('Service: ' + appointment.service)
+        #         print()
 
 
         print("~Seeding complete!~")
