@@ -94,6 +94,7 @@ if __name__ == '__main__':
         start_time = time(12, 0)
         end_time = time(20, 0) 
         working_hours_minutes = (end_time.hour - start_time.hour) * 60
+        valid_minutes = [0, 30]
         for i in range(20):
             rand_user = rc(users)
             rand_t = rc(therapists)
@@ -104,9 +105,10 @@ if __name__ == '__main__':
 
             # Generate a random date within the next 30 days
             appointment_date = now + timedelta(days=randint(1, 30))
-            random_minutes = randint(0, working_hours_minutes)
+            random_minutes = rc(valid_minutes)
+            random_hour = randint(start_time.hour, end_time.hour)
 
-            appointment_time = (datetime.min + timedelta(minutes=random_minutes)).time()
+            appointment_time = time(random_hour, random_minutes)
             appointment_datetime = datetime.combine(appointment_date, appointment_time)
             end_datetime = appointment_datetime + timedelta(minutes=duration)
 

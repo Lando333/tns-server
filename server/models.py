@@ -16,7 +16,7 @@ def get_uuid():
 
 
 user_appointment = db.Table('user_appointment', 
-    db.Column('user_id', db.Integer, db.ForeignKey('users.user_id')),
+    db.Column('user_id', db.String(36), db.ForeignKey('users.user_id')),
     db.Column('appointment_id', db.Integer, db.ForeignKey('appointments.appointment_id'))
 )
 therapist_services = db.Table(
@@ -28,7 +28,7 @@ therapist_services = db.Table(
 class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
 
-    user_id = db.Column(db.String(32), primary_key=True, unique=True, default=get_uuid)
+    user_id = db.Column(db.String(36), primary_key=True, unique=True, default=get_uuid)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(200), unique=True, nullable=False)
@@ -47,7 +47,7 @@ class Address(db.Model, SerializerMixin):
     __tablename__ = 'addresses'
 
     address_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.user_id'))
     address_line1 = db.Column(db.String(100), nullable=False)
     address_line2 = db.Column(db.String(50))
     city = db.Column(db.String(50), nullable=False)
@@ -60,7 +60,7 @@ class Therapist(db.Model, SerializerMixin):
     __tablename__ = 'therapists'
 
     therapist_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.user_id'))
     created_at = db.Column(DateTime, default=datetime.utcnow)
 
     services = db.relationship('Service', secondary='therapist_services')
@@ -80,7 +80,7 @@ class Appointment(db.Model, SerializerMixin):
     __tablename__ = 'appointments'
 
     appointment_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String, db.ForeignKey('users.user_id'))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.user_id'))
     therapist_id = db.Column(db.Integer, db.ForeignKey('therapists.therapist_id'))
     service = db.Column(db.String, nullable=False)
     appointment_date = db.Column(Date, nullable=False)
