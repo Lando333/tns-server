@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import pytz
-from flask import Flask, request, jsonify, session
+
+import json
+from flask import Flask, request, jsonify, session, url_for, redirect
 from flask_login import current_user
 from flask_cors import CORS, cross_origin
 from flask_migrate import Migrate
@@ -11,6 +12,8 @@ from flask_bcrypt import Bcrypt
 from config import ApplicationConfig
 from datetime import datetime, timedelta
 from models import db, User, Address, Therapist, Appointment, Service, Schedule
+# import pytz
+import stripe
 
 # Instantiate app, set attributes
 app = Flask(__name__)
@@ -24,6 +27,7 @@ CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
 db.init_app(app)
 
 api = Api(app)
+stripe.api_key = app.config['STRIPE_SECRET_KEY']
 
 
 def get_user_id(user_id):
@@ -144,7 +148,8 @@ def get_therapists():
     therapist_data = [{
         "name": therapist.user.first_name + " " + therapist.user.last_name[:1] + ".",
         "services": [service.title for service in therapist.services],
-        "therapist_id": therapist.therapist_id
+        "therapist_id": therapist.therapist_id,
+        "user_id":therapist.user_id
     } for therapist in therapists]
     return jsonify(therapist_data), 200
 
@@ -183,13 +188,11 @@ def get_therapist_services(therapist_name):
         return jsonify(services)
     return jsonify({"error":"No services found."}), 404
 
-
-@app.route("/create_appointment", methods=["POST"])
-def create_appointment():
+@app.route("/check_schedule", methods=["POST"])
+def check_schedule():
     user_id = request.json["user_id"]
     therapist_id = request.json["therapist_id"]
     service = request.json["service"]
-    duration = int(request.json["duration"])
     time = request.json["time"]
     start = request.json["start"]
 
@@ -197,11 +200,9 @@ def create_appointment():
     user = User.query.filter_by(user_id=user_id).first()
     if not user:
         return jsonify({"error": "Invalid user ID"}), 400
-
     therapist = Therapist.query.filter_by(therapist_id=therapist_id).first()
     if not therapist:
         return jsonify({"error": "Don't forget your therapist!"}), 400
-    
     serv = Service.query.filter_by(title=service).first()
     if not serv:
         return jsonify({"error": "Please choose a service!"}), 400
@@ -214,6 +215,16 @@ def create_appointment():
             time_hour = int(time.split(":")[0])
             if appointment_hour == time_hour or appointment_hour +1 == time_hour or appointment_hour -1 == time_hour:
                 return jsonify({"error": "That time is unavailable. Please try a different time or therapist."}), 400
+    return jsonify({"message": "Schedule is available"}), 200
+
+@app.route("/create_appointment", methods=["POST"])
+def create_appointment():
+    user_id = request.json["user_id"]
+    therapist_id = request.json["therapist_id"]
+    service = request.json["service"]
+    duration = int(request.json["duration"])
+    time = request.json["time"]
+    start = request.json["start"]
 
     # Create the appointment
     appointment = Appointment(
@@ -227,7 +238,6 @@ def create_appointment():
     print(appointment)
     db.session.add(appointment)
     db.session.commit()
-
     return jsonify({"message": "Appointment created successfully"}), 201
 
 
@@ -235,27 +245,82 @@ def create_appointment():
 def update_schedule():
     user_id = request.json.get('userId')
     updated_schedule = request.json.get('updatedSchedule')
-    valid_user = User.query.filter_by(user_id=user_id).first()
-    valid_therapist = Therapist.query.filter_by(user_id=valid_user.user_id).first()
-    if valid_therapist and updated_schedule:
-        Schedule.query.filter_by(therapist_id=valid_therapist.therapist_id).delete()
+
+    # Check if all start and end times are empty
+    if all(not day_data['startTime'] and not day_data['endTime'] for day_data in updated_schedule.values()):
+        return jsonify({"error": "Please fill in your schedule!"}), 400
+
+    valid_therapist = Therapist.query.filter_by(user_id=user_id).first()
+    if valid_therapist:
         schedules = []
         for day, data in updated_schedule.items():
+            start_time = data['startTime']
+            end_time = data['endTime']
+            # Check if both start and end times are empty
+            if not start_time and not end_time:
+                continue 
+            # Check if either start or end time is missing
+            if not start_time or not end_time:
+                return jsonify({"error": "Invalid schedule update"}), 400
             schedule = Schedule(
                 therapist_id=valid_therapist.therapist_id,
                 day_of_week=day.title(),
-                start_time=data['startTime'],
-                end_time=data['endTime']
+                start_time=start_time,
+                end_time=end_time
             )
             schedules.append(schedule)
 
-        # Add the new schedules to the database
+        # Delete existing schedules for the therapist
+        Schedule.query.filter_by(therapist_id=valid_therapist.therapist_id).delete()
+
         db.session.add_all(schedules)
         db.session.commit()
-
         return jsonify({"message": "Schedule updated successfully"}), 200
     else:
-        return jsonify({"error": "Invalid request"}), 400
+        return jsonify({"error": "Invalid user"}), 400
+
+@app.route("/tx60")
+def treatment_sixty():
+    stripe_session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=[{
+            'price': 'price_1NNeRBIsiLf1acuK3Pb3UYXb',
+            'quantity': 1,
+        }],
+        mode='payment',
+        success_url=url_for('thanks', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url=url_for('index', _external=True),
+    )
+    return jsonify({
+        "message": "Treatment booked successfully",
+        "session_id": stripe_session.id
+    }), 200
+
+@app.route("/tx90")
+def treatment_ninety():
+    stripe_session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=[{
+            'price': 'price_1NNeS6IsiLf1acuKVvIQ1Rwt',
+            'quantity': 1,
+        }],
+        mode='payment',
+        success_url=url_for('thanks', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url=url_for('index', _external=True),
+    )
+    return jsonify({
+        "message": "Treatment booked successfully",
+        "session_id": stripe_session.id
+    }), 200
+
+@app.route("/thanks", methods=['GET'])
+def thanks():
+    session_id = request.args.get('session_id')
+
+    if session_id:
+        return redirect("http://localhost:3000/thanks")
+
+    return jsonify({"message": "Event received"}), 200
 
 
 
