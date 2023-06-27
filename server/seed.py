@@ -109,6 +109,11 @@ if __name__ == '__main__':
             random_hour = randint(start_time.hour, end_time.hour)
 
             appointment_time = time(random_hour, random_minutes)
+            if random_hour > 12:
+                random_hour -= 12
+            if random_minutes == 0:
+                random_minutes = '00'
+            t = str(random_hour)+':'+ str(random_minutes)+ 'PM'
             appointment_datetime = datetime.combine(appointment_date, appointment_time)
             end_datetime = appointment_datetime + timedelta(minutes=duration)
 
@@ -117,13 +122,11 @@ if __name__ == '__main__':
                 user_id=rand_user.user_id,
                 service=random_service.title,
                 duration=duration,
-                appointment_time=appointment_time,
-                appointment_date=appointment_datetime,
-                end_datetime=end_datetime,
+                appointment_time=t,
+                appointment_date=str(appointment_datetime),
             )
             print("start "+str(a.appointment_date))
             print("time "+str(a.appointment_time))
-            print("end "+str(a.end_datetime))
             print()
             appointments.append(a)
             a.users.append(rand_user)

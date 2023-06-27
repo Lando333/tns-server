@@ -19,8 +19,7 @@ user_appointment = db.Table('user_appointment',
     db.Column('user_id', db.String(36), db.ForeignKey('users.user_id')),
     db.Column('appointment_id', db.Integer, db.ForeignKey('appointments.appointment_id'))
 )
-therapist_services = db.Table(
-    'therapist_services',
+therapist_services = db.Table('therapist_services',
     db.Column('therapist_id', db.Integer, db.ForeignKey('therapists.therapist_id')),
     db.Column('service_id', db.Integer, db.ForeignKey('services.service_id'))
 )
@@ -62,8 +61,20 @@ class Therapist(db.Model, SerializerMixin):
     therapist_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(36), db.ForeignKey('users.user_id'))
     created_at = db.Column(DateTime, default=datetime.utcnow)
+    schedule = db.relationship('Schedule', uselist=False, back_populates='therapist')
 
     services = db.relationship('Service', secondary='therapist_services')
+
+class Schedule(db.Model):
+    __tablename__ = 'schedules'
+
+    schedule_id = db.Column(db.Integer, primary_key=True)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('therapists.therapist_id'))
+    day_of_week = db.Column(db.String(10), nullable=False)
+    start_time = db.Column(db.String, nullable=False)
+    end_time = db.Column(db.String, nullable=False)
+
+    therapist = db.relationship('Therapist', back_populates='schedule')
 
 
 class Service(db.Model, SerializerMixin):
@@ -83,21 +94,19 @@ class Appointment(db.Model, SerializerMixin):
     user_id = db.Column(db.String(36), db.ForeignKey('users.user_id'))
     therapist_id = db.Column(db.Integer, db.ForeignKey('therapists.therapist_id'))
     service = db.Column(db.String, nullable=False)
-    appointment_date = db.Column(Date, nullable=False)
-    appointment_time = db.Column(Time, nullable=False)
     duration = db.Column(db.Integer, nullable=False)
-    end_datetime = db.Column(Date, nullable=False)
+    appointment_date = db.Column(db.String, nullable=False)
+    appointment_time = db.Column(db.String, nullable=False)
     created_at = db.Column(DateTime, default=datetime.utcnow)
 
     client = db.relationship('User', backref='user_appointments', foreign_keys=[user_id])
     therapist = db.relationship('Therapist', backref='therapist_appointments', foreign_keys=[therapist_id])
 
-    def __init__(self, therapist_id, user_id, service, appointment_date, appointment_time, duration, end_datetime):
+    def __init__(self, therapist_id, user_id, service, appointment_date, appointment_time, duration):
         self.therapist_id = therapist_id
         self.user_id = user_id
         self.service = service
         self.appointment_date = appointment_date
         self.appointment_time = appointment_time
         self.duration = duration
-        self.end_datetime = end_datetime
 

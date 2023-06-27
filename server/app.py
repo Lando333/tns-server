@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import pytz
 from flask import Flask, request, jsonify, session
+from flask_login import current_user
 from flask_cors import CORS, cross_origin
 from flask_migrate import Migrate
 from flask_restful import Api, Resource, reqparse
@@ -9,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from flask_bcrypt import Bcrypt
 from config import ApplicationConfig
 from datetime import datetime, timedelta
-from models import db, User, Address, Therapist, Appointment, Service
+from models import db, User, Address, Therapist, Appointment, Service, Schedule
 
 # Instantiate app, set attributes
 app = Flask(__name__)
@@ -155,10 +156,7 @@ def get_all_appointments():
     for appointment in appointments:
         therapist = Therapist.query.get(appointment.therapist_id)
         user = User.query.get(appointment.user_id)
-        
-        start_datetime = datetime.combine(appointment.appointment_date, appointment.appointment_time)
-        end_datetime = start_datetime + timedelta(minutes=appointment.duration)
-        
+
         appointment_dict = {
             'title': f'{therapist.user.first_name} - {appointment.service} - {appointment.duration}',
             'appointment_id': appointment.appointment_id,
@@ -167,8 +165,8 @@ def get_all_appointments():
             'therapist_name': f'{therapist.user.first_name} {therapist.user.last_name}',
             'service': appointment.service,
             'duration': appointment.duration,
-            'start': start_datetime.strftime('%Y-%m-%dT%H:%M:%S'),
-            'end': end_datetime.strftime('%Y-%m-%dT%H:%M:%S'),
+            'start': f'{appointment.appointment_date} {appointment.appointment_time}',
+            'time': appointment.appointment_time,
             'created_at': appointment.created_at.strftime('%Y-%m-%dT%H:%M:%S'),
         }
         appointment_data.append(appointment_dict)
@@ -183,54 +181,81 @@ def get_therapist_services(therapist_name):
     if therapist:
         services = [service.title for service in therapist.services]
         return jsonify(services)
-    return jsonify([]), 404  # Return an empty list if therapist not found
+    return jsonify({"error":"No services found."}), 404
 
 
 @app.route("/create_appointment", methods=["POST"])
 def create_appointment():
-    title = request.json["title"]
     user_id = request.json["user_id"]
-    therapist_name = request.json["therapist_name"]
+    therapist_id = request.json["therapist_id"]
     service = request.json["service"]
     duration = int(request.json["duration"])
     time = request.json["time"]
-    start = datetime.strptime(request.json["start"], "%Y-%m-%d %H:%M:%S")
-    end = datetime.strptime(request.json["end"], "%Y-%m-%d %H:%M:%S")
-
+    start = request.json["start"]
 
     # Validate the event data
-    if not title:
-        return jsonify({"error": "Title is required"}), 400
-
-    user = User.query.get(user_id)
+    user = User.query.filter_by(user_id=user_id).first()
     if not user:
         return jsonify({"error": "Invalid user ID"}), 400
 
-    therapist = Therapist.query.join(User).filter(User.first_name == therapist_name).first()
+    therapist = Therapist.query.filter_by(therapist_id=therapist_id).first()
     if not therapist:
-        return jsonify({"error": "Invalid therapist ID"}), 400
+        return jsonify({"error": "Don't forget your therapist!"}), 400
+    
+    serv = Service.query.filter_by(title=service).first()
+    if not serv:
+        return jsonify({"error": "Please choose a service!"}), 400
 
-    # Check if the service exists
-    service = Service.query.filter_by(title=service).first()
-    if not service:
-        return jsonify({"error": "Invalid service"}), 400
+    existing_appointments = Appointment.query.filter_by(therapist_id=therapist_id).all()
+    for appointment in existing_appointments:
+        if appointment.appointment_date == start:
+            appointment_time = appointment.appointment_time.split(":")
+            appointment_hour = int(appointment_time[0])
+            time_hour = int(time.split(":")[0])
+            if appointment_hour == time_hour or appointment_hour +1 == time_hour or appointment_hour -1 == time_hour:
+                return jsonify({"error": "That time is unavailable. Please try a different time or therapist."}), 400
 
     # Create the appointment
     appointment = Appointment(
-        therapist_id=therapist_name,
-        client=user,
+        user_id=user_id,
+        therapist_id=therapist_id,
         service=service,
-        appointment_date=start.date(),
-        appointment_time=start.time(),
-        end_datetime=end
+        duration=duration,
+        appointment_date=start,
+        appointment_time=time,
     )
-
-
+    print(appointment)
     db.session.add(appointment)
     db.session.commit()
 
     return jsonify({"message": "Appointment created successfully"}), 201
 
+
+@app.route('/update_schedule', methods=['POST'])
+def update_schedule():
+    user_id = request.json.get('userId')
+    updated_schedule = request.json.get('updatedSchedule')
+    valid_user = User.query.filter_by(user_id=user_id).first()
+    valid_therapist = Therapist.query.filter_by(user_id=valid_user.user_id).first()
+    if valid_therapist and updated_schedule:
+        Schedule.query.filter_by(therapist_id=valid_therapist.therapist_id).delete()
+        schedules = []
+        for day, data in updated_schedule.items():
+            schedule = Schedule(
+                therapist_id=valid_therapist.therapist_id,
+                day_of_week=day.title(),
+                start_time=data['startTime'],
+                end_time=data['endTime']
+            )
+            schedules.append(schedule)
+
+        # Add the new schedules to the database
+        db.session.add_all(schedules)
+        db.session.commit()
+
+        return jsonify({"message": "Schedule updated successfully"}), 200
+    else:
+        return jsonify({"error": "Invalid request"}), 400
 
 
 
