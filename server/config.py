@@ -16,8 +16,9 @@ class ApplicationConfig:
 
     CORS_ORIGINS = '*'
 
+    STRIPE_PUBLIC_KEY = "pk_test_Tf1S5BkuE7m8m8LfpcfX82LN"
+    STRIPE_SECRET_KEY = "sk_test_zhHsCoE4VH9JPgYo1E17b7o7"
 
 
-
-# generate a secret key:
+# generate a secret key for Flask:
 # python -c 'import os; print(os.urandom(16))'
