@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify, session, url_for, redirect
 from flask_login import current_user
 from flask_cors import CORS, cross_origin
 from flask_migrate import Migrate
-from flask_restful import Api, Resource, reqparse
+from flask_restful import Api, Resource, abort, reqparse
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from flask_bcrypt import Bcrypt
@@ -188,6 +188,26 @@ def get_therapist_services(therapist_name):
         return jsonify(services)
     return jsonify({"error":"No services found."}), 404
 
+@app.route("/get_therapist_schedule/<int:therapist_id>")
+def get_therapist_schedule(therapist_id):
+    # therapist_id = request.json["selectedTherapistId"]
+    print(therapist_id)
+
+    therapist = Therapist.query.filter_by(therapist_id=therapist_id).first()
+    if not therapist:
+        return jsonify({"error": "Therapist unavailable."}), 400
+    schedule = Schedule.query.filter_by(therapist_id=therapist_id).all()
+    schedule_data = []
+    for entry in schedule:
+        schedule_data.append({
+            "schedule_id": entry.schedule_id,
+            "day_of_week": entry.day_of_week,
+            "start_time": entry.start_time,
+            "end_time": entry.end_time
+        })
+    return jsonify({"schedule": schedule_data}), 200
+
+
 @app.route("/check_schedule", methods=["POST"])
 def check_schedule():
     user_id = request.json["user_id"]
@@ -309,7 +329,7 @@ def treatment_ninety():
         }],
         mode='payment',
         success_url=url_for('thanks', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
-        cancel_url=url_for('index', _external=True),
+        cancel_url=url_for('/@me', _external=True),
     )
     return jsonify({
         "message": "Treatment booked successfully",
@@ -319,11 +339,42 @@ def treatment_ninety():
 @app.route("/thanks", methods=['GET'])
 def thanks():
     session_id = request.args.get('session_id')
-
     if session_id:
         return redirect("http://localhost:3000/thanks")
-
     return jsonify({"message": "Event received"}), 200
+
+
+@app.route('/stripe_webhook', methods=['POST'])
+def stripe_webhook():
+    if request.content_length > 1024 * 1024:
+        print('REQUEST TOO BIG')
+        abort(400)
+
+    payload = request.get_data()
+    sig_header = request.environ.get('HTTP_STRIPE_SIGNATURE')
+    endpoint_secret = 'whsec_e623208b34cb811c9ab8ddc606d34c017a21da9a0730c2d9c8d45cde8d27bff5'
+    event = None
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, endpoint_secret
+        )
+    except ValueError as e:
+        print('INVALID PAYLOAD')
+        return {}, 400
+    except stripe.error.SignatureVerificationError as e:
+        print('INVALID SIGNATURE')
+        return {}, 400
+
+    # Handle the checkout.session.completed event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        print(session)
+        line_items = stripe.checkout.Session.list_line_items(session['id'], limit=1)
+        print(line_items['data'][0]['description'])
+
+    return {}
+
 
 
 
