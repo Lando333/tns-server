@@ -193,6 +193,7 @@ def check_schedule():
     user_id = request.json["user_id"]
     therapist_id = request.json["therapist_id"]
     service = request.json["service"]
+    duration = request.json["duration"]
     time = request.json["time"]
     start = request.json["start"]
 
@@ -206,6 +207,8 @@ def check_schedule():
     serv = Service.query.filter_by(title=service).first()
     if not serv:
         return jsonify({"error": "Please choose a service!"}), 400
+    if isinstance(duration, str):
+        return jsonify({"error": "How long would you like your service to last?"}), 400
 
     existing_appointments = Appointment.query.filter_by(therapist_id=therapist_id).all()
     for appointment in existing_appointments:
