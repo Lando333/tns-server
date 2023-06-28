@@ -23,7 +23,8 @@ OFFERED_SERVICES = [
     'Deep Tissue',
     'Reflexology',
     'Acupuncture',
-    'Acupressure'
+    'Acupressure',
+    'Reiki'
 ]
 
 if __name__ == '__main__':
