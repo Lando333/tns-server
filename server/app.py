@@ -12,7 +12,7 @@ from flask_bcrypt import Bcrypt
 from config import ApplicationConfig
 from datetime import datetime, timedelta
 from models import db, User, Address, Therapist, Appointment, Service, Schedule
-# import pytz
+import re
 import stripe
 
 # Instantiate app, set attributes
@@ -59,12 +59,27 @@ def register_user():
     password = request.json["password"]
     first_name = request.json["first_name"]
     last_name = request.json["last_name"]
+    address_line1 = request.json["address_line1"]
+    address_line2 = request.json["address_line2"]
+    city = request.json["city"]
+    state = request.json["state"]
+    zip_code = request.json["zip_code"]
 
+    if not (isinstance(first_name, str) and len(first_name) >= 1):
+        return jsonify({"error": "First name must be a string with at least 1 character"}), 400
+    if not (isinstance(last_name, str) and len(last_name) >= 1):
+        return jsonify({"error": "Last name must be a string with at least 1 character"}), 400
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        return jsonify({"error": "Invalid email"}), 400
+    if len(password) < 5:
+        return jsonify({"error": "Password must have at least 5 characters"}), 400
+    if len(zip_code) != 5:
+        return jsonify({"error": "Invalid zip code"}), 400
     user_exists = User.query.filter_by(email=email).first() is not None
     if user_exists:
         return jsonify({"error": "User already exists"}), 409
-    hashed_password = bcrypt.generate_password_hash(password)
 
+    hashed_password = bcrypt.generate_password_hash(password)
     new_user = User(
         email=email,
         password=hashed_password,
@@ -74,13 +89,6 @@ def register_user():
     db.session.add(new_user)
     db.session.commit()
 
-    address_line1 = request.json["address_line1"]
-    address_line2 = request.json["address_line2"]
-    city = request.json["city"]
-    state = request.json["state"]
-    zip_code = request.json["zip_code"]
-    country = request.json["country"]
-
     user_address = Address(
         user_id=new_user.user_id,
 
@@ -89,7 +97,7 @@ def register_user():
         city=city,
         state=state,
         zip_code=zip_code,
-        country=country
+        country='US'
     )
     db.session.add(user_address)
     db.session.commit()
