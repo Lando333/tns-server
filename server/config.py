@@ -20,5 +20,5 @@ class ApplicationConfig:
     STRIPE_SECRET_KEY = "sk_test_zhHsCoE4VH9JPgYo1E17b7o7"
 
 
-# generate a secret key for Flask:
+# command to generate a secret key for Flask:
 # python -c 'import os; print(os.urandom(16))'
