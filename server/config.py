@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+load_dotenv()   # loads secret key from .env
 
 class ApplicationConfig:
     SECRET_KEY = os.environ["SECRET_KEY"]
